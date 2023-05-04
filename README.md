@@ -1,4 +1,4 @@
-# Retirements_epidemiology_ATP_WTA_Tour
+# Retirements and epidemiology in the ATP and WTA Tour
 
 # Manuscript submited in xxxx
 Originally, this is the repository for the manuscript _"Retirements of professional tennis players in elite tournaments"_ that is submited in the 
