@@ -241,9 +241,23 @@ ATP$tourney_level <- factor(ATP$tourney_level,ordered=FALSE)
 
 ATP$tourney_level<-relevel(ATP$tourney_level, ref = "250 or 500")
 
+##Interactions
 
-model0<-glm(formula = Retirement ~ surface + round + tourney_level+dif_rank+dif_age+log(games), offset=log(games), family = "binomial", data = ATP)
+#d <- ATP
+#ct <- party::ctree(Retirement~surface+year+round+sets+tourney_level,
+#            data = d, controls=party::ctree_control(maxdepth=3))
+#plot(ct)
+
+
+##Linealitat
+
+# Model 0 additiu
+
+model0<-glm(Retirement~surface + round +tourney_level+year+dif_rank+dif_age+sets,offset=log(games), family = "binomial", data = ATP)
 summary(model0)
+
+# summary(model0) 
+Anova(model0)
 
 exp(model0$coefficients)
 exp(confint(model0))
