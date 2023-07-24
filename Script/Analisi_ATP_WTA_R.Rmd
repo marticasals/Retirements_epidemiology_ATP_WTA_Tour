@@ -1,0 +1,991 @@
+---
+title: "Reanàlisi ATP"
+author: "Lia Oliver"
+date: "17/07/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r}
+
+
+load("ATP.RData")
+load("WTA.RData")
+
+
+median(as.numeric(table(ATP$year)))
+range(as.numeric(table(ATP$year)))
+
+
+median(as.numeric(table(WTA$year)))
+range(as.numeric(table(WTA$year)))
+
+games_atp_any <-NULL
+anys <- names(table(ATP$year))
+for(i in 1:length(table(ATP$year))){
+  t <- ATP$games[which(ATP$year==anys[i])]
+  games_atp_any[i] <- sum(t)
+}
+games_any <- games_atp_any/as.numeric(table(ATP$year))
+
+increment <- NULL
+for(i in 1:(length(games_any)-1)){
+  increment[i] <- games_any[i+1]-games_any[i]
+}
+games_wta_any <-NULL
+anys <- names(table(WTA$year))
+for(i in 1:length(table(WTA$year))){
+  t <- WTA$games[which(WTA$year==anys[i])]
+  games_wta_any[i] <- sum(t)
+}
+
+games_any_wta <- games_wta_any/as.numeric(table(WTA$year))
+
+increment_wta <- NULL
+for(i in 1:(length(games_any_wta)-1)){
+  increment_wta[i] <- games_any_wta[i+1]-games_any_wta[i]
+}
+
+```
+
+
+# CompareGroups
+
+```{r}
+
+# ATP$Retirement<-factor(ATP$Retirement, levels = c("TRUE", "FALSE"), labels = c("YES", "NO"))
+
+library(compareGroups)
+
+ATPtab<-descrTable(Retirement~tourney_level+surface+winner_hand+loser_hand+dif_age+dif_rank+round, ATP)
+
+ATP$dif_age <- as.numeric(ATP$dif_age)
+compare <- compareGroups(Retirement~tourney_level+surface+winner_hand+loser_hand+dif_age+dif_rank+round, ATP,method = 1)
+
+createTable(compare,show.all = T,show.n = T)
+```
+
+# Descriptives
+
+```{r}
+library("SmartEDA")
+ExpCustomStat(ATP,Cvar=c("tourney_level","Retirement"),gpby=TRUE,filt=NULL)
+retTourney<-table(ATP$Retirement, ATP$tourney_level)
+
+ExpCustomStat(ATP,Cvar=c("surface","Retirement"),gpby=TRUE,filt=NULL)
+retSurface<-table(ATP$Retirement, ATP$surface)
+
+ExpCustomStat(ATP,Cvar=c("round","Retirement"),gpby=TRUE,filt=NULL)
+retRound<-table(ATP$Retirement, ATP$round)
+
+incidencia <- (954/980504)*1000
+interval_confi <- binom.test(954, 980504)$conf.int
+interval_confi*1000
+
+```
+
+# Age
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(ggthemes)
+library(scales)
+
+atp_age <- ATP %>%
+  dplyr::select(year, winner_age, loser_age) %>%
+  gather("player", "age", winner_age, loser_age)
+
+summary(round(atp_age$age, 2))
+
+```
+## Tourney_level (sets)
+```{r message=FALSE, warning=FALSE, error=FALSE}
+library("SmartEDA")
+library("epiR")
+ExpCustomStat(ATP,Cvar=c("tourney_level","Retirement"),gpby=TRUE,filt=NULL)
+(retTourney<-table(ATP$Retirement, ATP$tourney_level))
+
+totalsetsTourney<-aggregate(sets~tourney_level, data = ATP, sum)
+totalsetsTourney
+
+# Comparem Masters vs. Grand Slams 
+GS_M<-c(587,70737,788,130052)
+epi.2by2(dat = GS_M, method = "cohort.time", digits = 2,
+conf.level = 0.95, units = 1000, interpret = FALSE, outcome = "as.columns")
+
+# Comparem Tour Finals vs. Grand Slams
+GS_TF<-c(2,1369,788,130052)
+epi.2by2(dat = GS_TF, method = "cohort.time", digits = 2,
+conf.level = 0.95, units = 1000, interpret = FALSE, outcome = "as.columns")
+
+# Comparem 250 or 500 vs. Grand Slams
+GS_250500<-c(2465,349554,788,130052)
+epi.2by2(dat = GS_250500, method = "cohort.time", digits = 2,
+conf.level = 0.95, units = 1000, interpret = FALSE, outcome = "as.columns")
+
+```
+
+## Tourney_level (games)
+```{r message=FALSE, warning=FALSE, error=FALSE}
+ExpCustomStat(ATP,Cvar=c("tourney_level","Retirement"),gpby=TRUE,filt=NULL)
+(retTourney<-table(ATP$Retirement, ATP$tourney_level))
+
+totalgamesTourney<-aggregate(games~tourney_level, data = ATP, sum)
+totalgamesTourney
+
+# Comparem Masters vs. Grand Slams 
+GS_M<-c(544,528411,758,927785)
+epi.2by2(dat = GS_M, method = "cohort.time", digits = 2,
+conf.level = 0.95, units = 1000, interpret = FALSE, outcome = "as.columns")
+
+# Comparem Tour Finals vs. Grand Slams
+GS_TF<-c(2,10576,758,927785)
+epi.2by2(dat = GS_TF, method = "cohort.time", digits = 2,
+conf.level = 0.95, units = 1000, interpret = FALSE, outcome = "as.columns")
+
+# Comparem 250 or 500 vs. Grand Slams
+GS_250500<-c(2235,2592110,758,927785)
+epi.2by2(dat = GS_250500, method = "cohort.time", digits = 2,
+conf.level = 0.95, units = 1000, interpret = FALSE, outcome = "as.columns")
+
+```
+
+## Surface(sets)
+
+```{r}
+#Comparem `surface` *vs.* `Retirement`
+ExpCustomStat(ATP,Cvar=c("surface","Retirement"),gpby=TRUE,filt=NULL)
+(retSurface<-table(ATP$Retirement, ATP$surface))
+
+totalsetsSurface<-aggregate(sets~surface, data = ATP, sum)
+totalsetsSurface
+
+# Comparem Grass vs. Hard
+Grass_Hard<-c(1799,235651,386,71841)
+epi.2by2(dat = Grass_Hard, method = "cohort.time", digits = 2,
+conf.level = 0.95, units = 1000, interpret = FALSE, outcome = "as.columns")
+
+
+# Comparem Grass vs. Clay
+Clay_Grass<-c(1367,191328,386,71841)
+epi.2by2(dat = Clay_Grass, method = "cohort.time", digits = 2,
+conf.level = 0.95, units = 1000, interpret = FALSE, outcome = "as.columns")
+
+
+# Comparem Grass vs. Carpet
+Grass_Carpet<-c(290,52892,386,71841)
+epi.2by2(dat = Grass_Carpet, method = "cohort.time", digits = 2,
+conf.level = 0.95, units = 1000, interpret = FALSE, outcome = "as.columns")
+
+```
+
+## Surface(games)
+
+```{r}
+#Comparem `surface` *vs.* `Retirement`
+ExpCustomStat(ATP,Cvar=c("surface","Retirement"),gpby=TRUE,filt=NULL)
+(retSurface<-table(ATP$Retirement, ATP$surface))
+
+totalgamesSurface<-aggregate(games~surface, data = ATP, sum)
+totalgamesSurface
+
+# Comparem Grass vs. Hard
+Grass_Hard<-c(1681,1744963,365,544654)
+epi.2by2(dat = Grass_Hard, method = "cohort.time", digits = 2,
+conf.level = 0.95, units = 1000, interpret = FALSE, outcome = "as.columns")
+
+
+# Comparem Grass vs. Clay  
+Clay_Grass<-c(1258,1371036,365,544654)
+epi.2by2(dat = Clay_Grass, method = "cohort.time", digits = 2,
+conf.level = 0.95, units = 1000, interpret = FALSE, outcome = "as.columns")
+
+
+# Comparem Grass vs. Carpet
+Grass_Carpet<-c(235,398229,365,544654)
+epi.2by2(dat = Grass_Carpet, method = "cohort.time", digits = 2,
+conf.level = 0.95, units = 1000, interpret = FALSE, outcome = "as.columns")
+
+```
+
+
+## Round(sets)
+
+```{r}
+#Comparem `round` *vs.* `Retirement`:
+ExpCustomStat(ATP,Cvar=c("round","Retirement"),gpby=TRUE,filt=NULL)
+(retRound<-table(ATP$Retirement, ATP$round))
+
+totalsetsRound<-aggregate(sets~round, data = ATP, sum)
+totalsetsRound
+
+# Comparem Preliminary vs. Final
+Preli_Final<-c(2773,411817,495,79699)
+epi.2by2(dat = Preli_Final, method = "cohort.time", digits = 2,
+conf.level = 0.95, units = 1000, interpret = FALSE, outcome = "as.columns")
+
+# Comparem Qualifying vs. Final
+Quali_Preli<-c(574,60196,495,79699)
+epi.2by2(dat = Quali_Preli, method = "cohort.time", digits = 2,
+conf.level = 0.95, units = 1000, interpret = FALSE, outcome = "as.columns")
+
+```
+
+
+## Round(games)
+
+```{r}
+#Comparem `round` *vs.* `Retirement`:
+ExpCustomStat(ATP,Cvar=c("round","Retirement"),gpby=TRUE,filt=NULL)
+(retRound<-table(ATP$Retirement, ATP$round))
+
+totalgamesRound<-aggregate(games~round, data = ATP, sum)
+totalgamesRound
+
+# Comparem Preliminary vs. Final
+Preli_Final<-c(2581,3018104,445,596269)
+epi.2by2(dat = Preli_Final, method = "cohort.time", digits = 2,
+conf.level = 0.95, units = 1000, interpret = FALSE, outcome = "as.columns")
+
+# Comparem Qualifying vs. Final
+Quali_Preli<-c(513,444509,445,596269)
+epi.2by2(dat = Quali_Preli, method = "cohort.time", digits = 2,
+conf.level = 0.95, units = 1000, interpret = FALSE, outcome = "as.columns")
+
+```
+
+ # Regression ATP
+
+```{r}
+#-- Load libraries -------------------------------------------------------------
+library(car)
+library(AER)
+library(MASS)
+library(countreg) # Rootgrams
+library(emmeans)
+library(effects)
+library(multcomp)
+
+#-- Arrange variables ----------------------------------------------------------
+ATP$sumAge <- ATP$winner_age + ATP$loser_age
+# ATP$games<-ATP$games+1
+# ATP$round <- factor(ATP$round,ordered=FALSE)
+# ATP$round<-relevel(ATP$round, ref = "Preliminary")
+# ATP$tourney_level <- factor(ATP$tourney_level,ordered=FALSE)
+# ATP$tourney_level<-relevel(ATP$tourney_level, ref = "250 or 500")
+## Retirement com númerica: OJO--> Canviat!
+ATP$Retirement_num <- 2-as.numeric(ATP$Retirement)
+ATP$tourney_level <- factor(ATP$tourney_level, 
+                            levels=c('Grand Slams','Masters','250 or 500','Tour Finals'))
+ATP$surface       <- factor(ATP$surface, 
+                            levels=c('Grass','Clay','Hard','Carpet'))
+ATP$round         <- factor(ATP$round, 
+                            levels=c('Qualifying','Final','Preliminary'))
+
+##-- Agregatte data ------------------------------------------------------------
+ATP$dif_age2 <- round(ATP$dif_age)
+cut_year <- 1990
+ATP2 <- aggregate(cbind(Retirement_num,games) ~ surface + round +
+                    tourney_level + year + dif_age2 , data=ATP, sum)
+ATP2$ind_year <- factor(ifelse(ATP2$year<=cut_year,'<=1990','>1990'))
+
+ATP2bis <- aggregate(cbind(Retirement_num,games) ~ surface + round +
+                     tourney_level + year, data=ATP, sum)
+ATP2bis$ind_year <- factor(ifelse(ATP2bis$year<=cut_year,'<=1990','>1990'))
+ATP2bis$year_cent <- ATP2bis$year - mean(ATP2bis$year)
+ATP2bis$year2     <- ATP2bis$year_cent^2
+ATP3 <- aggregate(cbind(Retirement_num,games) ~ year, data=ATP, sum)
+ATP3$lambda <- 1000 * ATP3$Retirement_num/ATP3$games
+ATP3$col <- (ATP3$games - min(ATP3$games))/diff(range(ATP3$games)) # Indicator of games standarized 0-1
+ATP4 <- aggregate(cbind(Retirement_num,games) ~ dif_age2, data=ATP, sum)
+ATP4$lambda <- 1000 * ATP4$Retirement_num/ATP4$games
+ATP4$col <- (ATP4$games - min(ATP4$games))/diff(range(ATP4$games)) # Indicator of games standarized 0-1
+
+##-- Descriptive analys year & dif_age -----------------------------------------
+par(mfrow=c(1,2))
+plot(lambda~year,ATP3, pch=19, col=rgb(0,0,0,ATP3$col))
+lines(lowess(ATP3$lambda~ATP3$year),lwd=2,col=3)
+plot(lambda~dif_age2,ATP4, pch=19, col=rgb(0,0,0,ATP4$col))
+lines(lowess(ATP4$lambda~ATP4$dif_age2),lwd=2,col=3)
+
+
+################################################################################
+# Poisson models
+################################################################################
+##-- Models (1) ----------------------------------------------------------------
+mod_pois_lin <- glm(Retirement_num~surface + round +
+                    tourney_level + year + dif_age2 ,offset=log(games), 
+                    family = "poisson", data = ATP2)
+mod_pois_qua <- glm(Retirement_num~surface + round +
+                    tourney_level + poly(year,2) + dif_age2,offset=log(games), 
+                    family = "poisson", data = ATP2)
+mod_pois_slo <- glm(Retirement_num ~ surface + round +
+                    tourney_level + year*ind_year + dif_age2,offset=log(games), 
+                    family = "poisson", data = ATP2)
+BIC(mod_pois_lin,mod_pois_qua,mod_pois_slo)
+
+##-- Validation (1) ------------------------------------------------------------
+mod_pois_slo
+summary(mod_pois_slo)
+Anova(mod_pois_slo) # dif_age should be removed?
+
+##-- Models (2) ----------------------------------------------------------------
+mod_pois_slo2 <- glm(Retirement_num ~ surface + round +
+                    tourney_level + year*ind_year,offset=log(games), 
+                    family = "poisson", data = ATP2)
+##-- Validation (2) ------------------------------------------------------------
+anova(mod_pois_slo2,mod_pois_slo,test = "Chisq")
+mod_pois_def <- mod_pois_slo2
+dispersiontest(mod_pois_def,trafo=1) # There is overdispersion
+dispersiontest(mod_pois_def,trafo=2) # There is overdispersion
+root.pois <- rootogram(mod_pois_def, style = "hanging", plot = TRUE)
+plot(mod_pois_def,1)
+
+################################################################################
+# Negative binomial
+################################################################################
+##-- Models (1) ----------------------------------------------------------------
+mod_nbin <- glm.nb(Retirement_num ~ surface + round +
+                   tourney_level + year*ind_year +
+                   offset(log(games)),
+                   data = ATP2)
+summary(mod_nbin)
+##-- Validation (1) ------------------------------------------------------------
+Anova(mod_nbin)
+plot(mod_nbin,1)
+BIC(mod_nbin,mod_pois_def)
+root.nb <- rootogram(mod_nbin, style = "hanging", plot = TRUE)
+
+##-- Models (2) ----------------------------------------------------------------
+# More robust (data more aggregated)
+mod_nbin2 <- glm.nb(Retirement_num ~ surface + round +
+                   tourney_level + year*ind_year+
+                   offset(log(games)),
+                   data = ATP2bis)
+summary(mod_nbin2)
+
+##-- Validation (2) ------------------------------------------------------------
+Anova(mod_nbin2)
+plot(mod_nbin2,1)
+residualPlots(mod_nbin2) # quadratic?
+root.nb <- rootogram(mod_nbin2, style = "hanging", plot = TRUE)
+res <- resid(mod_nbin2)
+plot(res~ATP2bis$year[as.numeric(names(res))],xla='Year',ylab='Residuals')
+lines(lowess(res~ATP2bis$year[as.numeric(names(res))]))
+# Pearson statistic:
+(X2P <- sum(resid(mod_nbin2,type="pearson")^2))
+1 - pchisq(X2P,mod_nbin2$df.residual)
+
+##-- Models (2) ----------------------------------------------------------------
+##-- Models differents with different year beavior
+mod_nbin_lin      <- glm.nb(Retirement_num ~ surface + round +
+                            tourney_level + year +
+                            offset(log(games)),
+                            data = ATP2bis)
+mod_nbin_qua      <- glm.nb(Retirement_num ~ surface + round +
+                            tourney_level + poly(year,2) +
+                            offset(log(games)),
+                            data = ATP2bis)
+mod_nbin_slo      <- glm.nb(Retirement_num ~ surface + round +
+                            tourney_level + year*ind_year +
+                            offset(log(games)),
+                            data = ATP2bis)
+mod_nbin_qua_slo1 <- glm.nb(Retirement_num ~ surface + round +
+                            tourney_level + year_cent*ind_year + year2 +
+                            offset(log(games)),
+                            data = ATP2bis)
+mod_nbin_qua_slo2 <- glm.nb(Retirement_num ~ surface + round +
+                            tourney_level + poly(year,2)*ind_year +
+                            offset(log(games)),
+                            data = ATP2bis)
+BIC(mod_nbin_lin,mod_nbin_slo,mod_nbin_qua,mod_nbin_qua_slo1,mod_nbin_qua_slo2)
+
+# mod_nbin_def <- mod_nbin_qua_slo2
+mod_nbin_def <- mod_nbin_slo
+summary(mod_nbin_def)
+Anova(mod_nbin_def)
+plot(mod_nbin_def,1)
+residualPlots(mod_nbin_def)
+root.nb <- rootogram(mod_nbin_def, style = "hanging", plot = TRUE)
+res <- resid(mod_nbin_def)
+plot(res~ATP2bis$year[as.numeric(names(res))],xla='Year',ylab='Residuals')
+lines(lowess(res~ATP2bis$year[as.numeric(names(res))]))
+# Pearson statistic:
+(X2P <- sum(resid(mod_nbin_def,type="pearson")^2))
+1 - pchisq(X2P,mod_nbin_def$df.residual)
+
+
+################################################################################
+# Interpretation
+################################################################################
+##-- Emmeans -------------------------------------------------------------------
+mod_def_ATP <- mod_nbin_slo
+emmeans(mod_def_ATP,~surface,      type='response',offset = log(1000))
+emmeans(mod_def_ATP,~round,        type='response',offset = log(1000))
+emmeans(mod_def_ATP,~tourney_level,type='response',offset = log(1000))
+emmeans(mod_def_ATP,~year|ind_year,type='response',offset = log(1000),
+        at=list(year=seq(1975,2020,15)))
+# emmeans(mod_def_ATP,~surface,type='response')
+# predict(mod_def_ATP,type = "response")[1:3]
+
+##-- effects -------------------------------------------------------------------
+plot(allEffects(mod_def_ATP,fixed.predictors=list(offset=log(1000))),
+     ylab="Retirements/1000 games")
+
+##-- Coef ----------------------------------------------------------------------
+# Point estimate
+coef   <- mod_def_ATP$coefficients
+n_coef <- length(coef)
+IRR0      <- exp(coef)[-c(1,(n_coef-1):n_coef) ]
+IRR_year_up_1990 <- exp(coef['year'] + coef['year:ind_year>1990'])
+IRR <- c(IRR0,IRR_year_up_1990)
+names(IRR)[n_coef-3] <- 'year (<=1990)'
+names(IRR)[n_coef-2] <- 'year (>1990)'
+
+# Confidence interval
+lh <- glht(mod_def_ATP, t(c(rep(0,9),1,0,1)))
+IRR_year_up_1990_conf <- exp(confint(lh)$confint[2:3])
+IRR0_conf <- exp(confint(mod_def))[-c(1,(n_coef-1):n_coef),]
+IRR_conf  <- rbind(IRR0_conf,IRR_year_up_1990_conf)
+rownames(IRR_conf)[n_coef-3] <- 'year (<=1990)'
+rownames(IRR_conf)[n_coef-2] <- 'year (>1990)'
+
+# Final table
+tab_ATP <- round(cbind(IRR,IRR_conf),3)
+
+
+anova(mod_def,test="Chi")
+mod_def$aic
+```
+
+
+```{r}
+library(dplyr)
+if(sum(names(ATP)=='sex')>1) ATP[,which(names(ATP)=='sex')[2]] <- NULL
+retirsATP <- ATP %>% dplyr::filter(Retirement=="YES")
+retirs_any<- group_by(retirsATP, year) %>%
+  summarise(retirs_any = n())
+retirs_any$incidencia<-retirs_any$retirs_any/nrow(ATP)*100
+library(ggplot2)
+ggplot(retirs_any, aes(x=year, y=incidencia))+geom_line()
+
+# Incidence per sets
+retirs_any$incidenciasets<-retirs_any$retirs_any/sum(ATP$sets)*1000
+ggplot(retirs_any, aes(x=year, y=incidenciasets))+geom_line()
+
+# Incidence per games
+retirs_any$incidenciagames<-retirs_any$retirs_any/sum(ATP$games)*1000
+ggplot(retirs_any, aes(x=year, y=incidenciagames))+geom_line()
+
+# Women's Incidence/Match Percentage Chart (WTA)
+# Match Incidence
+retirsWTA<-filter(WTA, Retirement)
+WTAretirs_any<-group_by(retirsWTA, year) %>%
+  summarise(retirs_any = n())
+WTAretirs_any$incidencia <- WTAretirs_any$retirs_any/nrow(WTA)*100
+ggplot(WTAretirs_any, aes(x=year, y=incidencia))+geom_line()
+
+# Incidence per sets
+WTAretirs_any$incidenciasets<-WTAretirs_any$retirs_any/sum(WTA$sets)*1000
+ggplot(retirs_any, aes(x=year, y=incidenciasets))+geom_line()
+
+# Incidence per games
+library("epitools")
+library("data.table")
+dd_WTA <- as.data.table(WTA)[,.(retirements=sum(Retirement=='YES'),games=sum(games)),by=year]
+pe <- pois.exact(x=dd_WTA$retirements,pt=dd_WTA$games)
+per_param <- 1000
+dd_WTA$incidenciagames<-per_param*pe[,'rate']
+dd_WTA$incidence_low <- per_param*pe[,'lower']
+dd_WTA$incidence_upp <- per_param*pe[,'upper']
+
+dd_ATP <- as.data.table(ATP)[,.(retirements=sum(Retirement=='YES'),games=sum(games)),by=year]
+pe <- pois.exact(x=dd_ATP$retirements,pt=dd_ATP$games)
+per_param <- 1000
+dd_ATP$incidenciagames<-per_param*pe[,'rate']
+dd_ATP$incidence_low <- per_param*pe[,'lower']
+dd_ATP$incidence_upp <- per_param*pe[,'upper']
+
+ 
+
+library(ggthemes)
+# Chart Percentage incidence/match with Men (ATP) and Women (WTA) at the same time:
+
+retirs<-rbind(dd_ATP, dd_WTA)
+retirs$tour <- c(rep("ATP",47),rep("WTA",45))
+p <- retirs %>%
+  filter(!is.na(incidenciagames)) %>%
+  ggplot(aes(y = incidenciagames, x = year, colour = tour)) + 
+  scale_colour_tableau(name = "") + 
+  geom_point(aes(color=tour), size=3) +
+  scale_color_manual(values=c("#080279","#01EEFE"))+
+  theme_gdocs() + theme(legend.position = "bottom", legend.direction = "horizontal",        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line.y = element_line(color = "black"),
+        axis.text.x = element_text(size = 14),
+        axis.text.y = element_text(size = 14),
+        axis.title.x = element_text(size = 14),
+        axis.title.y = element_text(size = 14)) + 
+  scale_y_continuous("Retirement Incidence/1000 games", breaks = scales::pretty_breaks(n = 10)) + 
+  scale_x_continuous("Year", breaks = scales::pretty_breaks(n = 10)) + 
+  geom_line(size=1)
+
+ggsave(filename="Incidence.png",width = 10)
+
+library(tidyr)
+
+
+atp_age <- ATP %>%
+  dplyr::select(year, winner_age, loser_age) %>%
+  gather("player", "age", winner_age, loser_age)
+
+wta_age <- WTA %>%
+  dplyr::select(year, winner_age, loser_age) %>%
+  gather("player", "age", winner_age, loser_age)
+
+atp_age$tour <- "ATP"
+wta_age$tour <- "WTA"
+
+ages <- rbind(atp_age, wta_age)
+
+ages %>%
+  filter(!is.na(age)) %>%
+  ggplot(aes(y = age, x = year, colour = tour)) + 
+  stat_summary(fun.data = "median_hilow", geom = "point") + 
+  scale_colour_tableau(name = "") + 
+  scale_color_manual(values=c("#080279","#01EEFE"))+
+  theme_gdocs() + theme(legend.position = "bottom", legend.direction = "horizontal",        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line.y = element_line(color = "black"),
+        axis.text.x = element_text(size = 12),
+        axis.text.y = element_text(size = 12),
+        axis.title.x = element_text(size = 14),
+        axis.title.y = element_text(size = 14)) + 
+  scale_y_continuous("Median Age", breaks = scales::breaks_width(width = 1),limits=c(20,30)) +
+  scale_x_continuous("Year", breaks = scales::breaks_width(width = 5)) 
+
+
+
+ggsave(filename="MedianAge.png",width = 10,height = 7)
+
+```
+
+
+# Anàlisi WTA
+# CompareGroups
+
+```{r}
+
+WTA$Retirement <- factor(ifelse(WTA$Retirement, "YES", "NO"))
+
+library(compareGroups)
+
+WTAtab<-descrTable(Retirement~tourney_level+surface+winner_hand+loser_hand+dif_age+dif_rank+round, WTA,byrow=T)
+WTAtab
+
+```
+# Age
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(ggthemes)
+library(scales)
+
+wta_age <- WTA %>%
+  dplyr::select(year, winner_age, loser_age) %>%
+  gather("player", "age", winner_age, loser_age)
+
+summary(round(wta_age$age, 2))
+
+```
+
+
+```{r}
+#incidencia sets ATP
+incidencia <- (3842/551712)*1000
+interval_confi <- binom.test(3842, 551712)$conf.int
+interval_confi*1000
+
+# incidencia sets WTA
+
+WTAinc<-(816/138942)*1000
+interval_confi <- binom.test(816, 138942)$conf.int
+interval_confi*1000
+
+# incidència games ATP
+incidencia <- (3842/4058803)*1000
+interval_confi <- binom.test(3842, 4058803)$conf.int
+interval_confi*1000
+
+
+# incidencia games WTA
+WTAinc<-(816/980504)*1000
+interval_confi <- binom.test(816, 980504)$conf.int
+interval_confi*1000
+
+
+
+```
+
+## Tourney_level (sets)
+
+```{r message=FALSE, warning=FALSE, error=FALSE}
+library("SmartEDA")
+library("epiR")
+ExpCustomStat(WTA,Cvar=c("tourney_level","Retirement"),gpby=TRUE,filt=NULL)
+(retTourney<-table(WTA$Retirement, WTA$tourney_level))
+
+totalsetsTourney <- aggregate(games~tourney_level, data = WTA, sum)
+totalsetsTourney
+
+# Comparem Premier vs. Grand Slams  
+GS_Premier<-c(365,30807,327,96771)
+epi.2by2(dat = GS_Premier, method = "cohort.time", digits = 2,
+conf.level = 0.95, units = 1000, interpret = FALSE, outcome = "as.columns")
+
+# Comparem Premier Mandatory vs. Grand Slams
+GS_PM<-c(124,11574,327,96771)
+epi.2by2(dat = GS_PM, method = "cohort.time", digits = 2,
+conf.level = 0.95, units = 1000, interpret = FALSE, outcome = "as.columns")
+
+```
+
+## Tourney_level(games)
+
+```{r message=FALSE, warning=FALSE, error=FALSE}
+ExpCustomStat(WTA,Cvar=c("tourney_level","Retirement"),gpby=TRUE,filt=NULL)
+(WTAretTourney<-table(WTA$Retirement, WTA$tourney_level))
+
+WTAtotalgamesTourney<-aggregate(games~tourney_level, data = WTA, sum)
+WTAtotalgamesTourney
+
+# Comparem Premier vs. Grand Slams  
+GS_Premier<-c(360,218308,325,680126)
+epi.2by2(dat = GS_Premier, method = "cohort.time", digits = 2,
+conf.level = 0.95, units = 1000, interpret = FALSE, outcome = "as.columns")
+
+# Comparem Premier Mandatory vs. Grand Slams
+GS_PM<-c(116,82070,325,680126)
+epi.2by2(dat = GS_PM, method = "cohort.time", digits = 2,
+conf.level = 0.95, units = 1000, interpret = FALSE, outcome = "as.columns")
+
+```
+
+## Surface(sets)
+
+```{r}
+
+#Comparem `surface` *vs.* `Retirement`
+ExpCustomStat(WTA,Cvar=c("surface","Retirement"),gpby=TRUE,filt=NULL)
+(WTAretSurface<-table(WTA$Retirement, WTA$surface))
+
+WTAtotalsetsSurface<-aggregate(games~surface, data = WTA, sum)
+WTAtotalsetsSurface
+
+# Comparem Grass vs. Carpet 
+Grass_Carpet<-c(9,933,109,28929)
+epi.2by2(dat = Grass_Carpet, method = "cohort.time", digits = 2,
+conf.level = 0.95, units = 1000, interpret = FALSE, outcome = "as.columns")
+
+# Comparem Grass vs. Clay
+Grass_Clay<-c(182,34581,109,28929)
+epi.2by2(dat = Grass_Clay, method = "cohort.time", digits = 2,
+conf.level = 0.95, units = 1000, interpret = FALSE, outcome = "as.columns")
+
+# Comparem Grass vs. Hard
+Grass_Hard<-c(516,74499,109,28929)
+epi.2by2(dat = Grass_Hard, method = "cohort.time", digits = 2,
+conf.level = 0.95, units = 1000, interpret = FALSE, outcome = "as.columns")
+
+```
+
+## Surface(games)
+
+```{r}
+
+#Comparem `surface` *vs.* `Retirement`
+ExpCustomStat(WTA,Cvar=c("surface","Retirement"),gpby=TRUE,filt=NULL)
+(WTAretSurface<-table(WTA$Retirement, WTA$surface))
+
+WTAtotalgamesSurface<-aggregate(games~surface, data = WTA, sum)
+WTAtotalgamesSurface
+
+# Comparem Grass vs. Carpet 
+Grass_Carpet<-c(9,6518,107,206121)
+epi.2by2(dat = Grass_Carpet, method = "cohort.time", digits = 2,
+conf.level = 0.95, units = 1000, interpret = FALSE, outcome = "as.columns")
+
+# Comparem Grass vs. Clay 
+Grass_Clay<-c(179,242569,107,206121)
+epi.2by2(dat = Grass_Clay, method = "cohort.time", digits = 2,
+conf.level = 0.95, units = 1000, interpret = FALSE, outcome = "as.columns")
+
+# Comparem Grass vs. Hard 
+Grass_Hard<-c(506,525296,107,206121)
+epi.2by2(dat = Grass_Hard, method = "cohort.time", digits = 2,
+conf.level = 0.95, units = 1000, interpret = FALSE, outcome = "as.columns")
+
+```
+## Round(sets)
+
+```{r message=FALSE, warning=FALSE, error=FALSE}
+
+#Comparem `round` *vs.* `Retirement`:
+ExpCustomStat(WTA,Cvar=c("round","Retirement"),gpby=TRUE,filt=NULL)
+(WTAretRound<-table(WTA$Retirement, WTA$round))
+
+WTAtotalsetsRound<-aggregate(games~round, data = WTA, sum)
+WTAtotalsetsRound
+
+# Comparem Final vs. Qualifying 
+Quali_Final<-c(59,7773,246,48702)
+epi.2by2(dat = Quali_Final, method = "cohort.time", digits = 2,
+conf.level = 0.95, units = 1000, interpret = FALSE, outcome = "as.columns")
+
+# Comparem Preliminary vs. Qualifying
+Preli_Quali<-c(511,82467,246,48702)
+epi.2by2(dat = Preli_Quali, method = "cohort.time", digits = 2,
+conf.level = 0.95, units = 1000, interpret = FALSE, outcome = "as.columns")
+
+```
+
+## Round(games)
+
+```{r message=FALSE, warning=FALSE, error=FALSE}
+
+#Comparem `round` *vs.* `Retirement`:
+ExpCustomStat(WTA,Cvar=c("round","Retirement"),gpby=TRUE,filt=NULL)
+(WTAretRound<-table(WTA$Retirement, WTA$round))
+
+WTAtotalgamesRound<-aggregate(games~round, data = WTA, sum)
+WTAtotalgamesRound
+
+# Comparem Final vs. Qualifying 
+Quali_Final<-c(55,55775,246,346964)
+epi.2by2(dat = Quali_Final, method = "cohort.time", digits = 2,
+conf.level = 0.95, units = 1000, interpret = FALSE, outcome = "as.columns")
+
+# Comparem Preliminary vs. Qualifying
+Preli_Quali<-c(500,577765,246,346964)
+epi.2by2(dat = Preli_Quali, method = "cohort.time", digits = 2,
+conf.level = 0.95, units = 1000, interpret = FALSE, outcome = "as.columns")
+
+```
+
+
+# Regression WTA
+
+```{r}
+WTA <- WTA %>% 
+  mutate(games = games + 1)
+
+# WTA$round <- factor(WTA$round, ordered=FALSE)
+# WTA$round <- relevel(WTA$round,ref = "Preliminary")
+# WTA$tourney_level<-relevel(WTA$tourney_level, ref = "Premier Mandatory")
+
+
+d <- WTA
+##-- Recomptes
+f_rate <- function(x,lab='Yes') sum(x==lab)/sum(!is.na(x))
+t_log_year_rate  <- log(tapply(d$Retirement,d$year,f_rate)+.1)
+rate <- as.numeric(t_log_year_rate)
+year  <- as.numeric(names(t_log_year_rate))
+plot(year,rate,xlab="calendar year",ylab="rate",las=1,main="Count data")
+lines(lowess(rate~year), col=4,lwd=2)
+t_year <- table(d$year,d$Retirement)
+log_odd_year <- log((t_year[,2]+.5) / (t_year[,1]+.5))
+year <- as.numeric(rownames(t_year))
+plot(year,log_odd_year,xlab="mean age (years)",ylab="logodd",las=1, main="Binay data")
+lines(lowess(log_odd_year~year,f = 0.02), col=4, lwd=2)
+
+#-- Arrange variables ----------------------------------------------------------
+WTA$year_cat      <- factor(ifelse(WTA$year<2010,"<2010",">=2010"),
+                            levels=c('<2010','>=2010'))
+WTA$tourney_level <- factor(WTA$tourney_level, 
+                            levels=c('Grand Slams','Premier','Premier Mandatory'))
+WTA$surface       <- factor(WTA$surface, 
+                            levels=c('Grass','Clay','Hard','Carpet'))
+WTA$round         <- factor(WTA$round, 
+                            levels=c('Qualifying','Final','Preliminary'))
+##-- Retirement com númerica
+WTA$Retirement_num <- WTA$Retirement
+
+##-- Agregatte data ------------------------------------------------------------
+WTA$dif_age2 <- round(WTA$dif_age)
+cut_year <- 1995
+WTA2 <- aggregate(cbind(Retirement_num,games) ~ surface + round +
+                    tourney_level + year + dif_age2 , data=WTA, sum)
+WTA2$ind_year <- factor(ifelse(WTA2$year<=cut_year,paste0('<=',cut_year),paste0('>',cut_year)))
+
+WTA2bis <- aggregate(cbind(Retirement_num,games) ~ surface + round +
+                     tourney_level + year, data=WTA, sum)
+WTA2bis$ind_year <- factor(ifelse(WTA2bis$year<=cut_year,paste0('<=',cut_year),paste0('>',cut_year)))
+WTA2bis$year_cent <- WTA2bis$year - mean(WTA2bis$year)
+WTA2bis$year2     <- WTA2bis$year_cent^2
+WTA3 <- aggregate(cbind(Retirement_num,games) ~ year, data=WTA, sum)
+WTA3$lambda <- 1000 * WTA3$Retirement_num/WTA3$games
+WTA3$col <- (WTA3$games - min(WTA3$games))/diff(range(WTA3$games)) # Indicator of games standarized 0-1
+WTA4 <- aggregate(cbind(Retirement_num,games) ~ dif_age2, data=WTA, sum)
+WTA4$lambda <- 1000 * WTA4$Retirement_num/WTA4$games
+WTA4$col <- (WTA4$games - min(WTA4$games))/diff(range(WTA4$games)) # Indicator of games standarized 0-1
+
+##-- Descriptive analys year & dif_age -----------------------------------------
+par(mfrow=c(1,2))
+plot(lambda~year,WTA3, pch=19, col=rgb(0,0,0,WTA3$col))
+lines(lowess(WTA3$lambda~WTA3$year,f=0.5),lwd=2,col=3)
+plot(lambda~dif_age2,WTA4, pch=19, col=rgb(0,0,0,WTA4$col))
+lines(lowess(WTA4$lambda~WTA4$dif_age2,f=0.5),lwd=2,col=3)
+
+################################################################################
+# Poisson models
+################################################################################
+##-- Models (1) ----------------------------------------------------------------
+mod_pois_lin <- glm(Retirement_num~surface + round +
+                    tourney_level + year + dif_age2 ,offset=log(games), 
+                    family = "poisson", data = WTA2)
+mod_pois_qua <- glm(Retirement_num~surface + round +
+                    tourney_level + poly(year,2) + dif_age2,offset=log(games), 
+                    family = "poisson", data = WTA2)
+mod_pois_cub <- glm(Retirement_num~surface + round +
+                    tourney_level + poly(year,3) + dif_age2,offset=log(games), 
+                    family = "poisson", data = WTA2)
+mod_pois_slo <- glm(Retirement_num ~ surface + round +
+                    tourney_level + year*ind_year + dif_age2,offset=log(games), 
+                    family = "poisson", data = WTA2)
+
+BIC(mod_pois_lin,mod_pois_qua,mod_pois_cub,mod_pois_slo)
+# we choose linear model
+
+##-- Validation (1) ------------------------------------------------------------
+summary(mod_pois_lin)
+Anova(mod_pois_lin) # dif_age should be removed?
+
+##-- Models (2) ----------------------------------------------------------------
+mod_pois_lin2 <- glm(Retirement_num ~ surface + round +
+                    tourney_level + year,offset=log(games), 
+                    family = "poisson", data = WTA2)
+##-- Validation (2) ------------------------------------------------------------
+anova(mod_pois_lin2,mod_pois_lin,test = "Chisq")
+mod_pois_def <- mod_pois_lin
+dispersiontest(mod_pois_def,trafo=1) # There is not overdispersion
+dispersiontest(mod_pois_def,trafo=2) # There is not overdispersion
+root.pois <- rootogram(mod_pois_def, style = "hanging", plot = TRUE)
+plot(mod_pois_def,1)
+
+##-- Models (3) ----------------------------------------------------------------
+# More robust (data more aggregated)
+mod_pois_lin3 <- glm(Retirement_num ~ surface + round +
+                    tourney_level + year,offset=log(games), 
+                    family = "poisson", data = WTA2bis)
+summary(mod_pois_lin3)
+
+##-- Validation (3) ------------------------------------------------------------
+mod_pois_def <- mod_pois_lin3
+dispersiontest(mod_pois_def,trafo=1) # There is not overdispersion
+dispersiontest(mod_pois_def,trafo=2) # There is not overdispersion
+root.pois <- rootogram(mod_pois_def, style = "hanging", plot = TRUE)
+plot(mod_pois_def,1)
+# Pearson statistic:
+(X2P <- sum(resid(mod_pois_def,type="pearson")^2))
+1 - pchisq(X2P,mod_pois_def$df.residual)
+residualPlots(mod_pois_def)
+
+
+################################################################################
+# Interpretation
+################################################################################
+##-- Emmeans -------------------------------------------------------------------
+mod_def_WTA <- mod_pois_def
+emmeans(mod_def_WTA,~surface,      type='response',offset = log(1000))
+emmeans(mod_def_WTA,~round,        type='response',offset = log(1000))
+emmeans(mod_def_WTA,~tourney_level,type='response',offset = log(1000))
+emmeans(mod_def_WTA,~year,type='response',offset = log(1000),
+        at=list(year=seq(1975,2020,15)))
+
+##-- effects -------------------------------------------------------------------
+plot(allEffects(mod_def_WTA,fixed.predictors=list(offset=log(1000))),
+     ylab="Retirements/1000 games")
+
+##-- Coef ----------------------------------------------------------------------
+# Point estimate
+coef     <- mod_def_WTA$coefficients
+n_coef   <- length(coef)
+IRR      <- exp(coef)[-1]
+IRR_conf <- exp(confint(mod_def_WTA))[-1,]
+
+# Final table
+tab_WTA <- round(cbind(IRR,IRR_conf),3)
+
+summary(mod_def_ATP)
+summary(mod_def_WTA)
+tab_ATP;tab_WTA
+```
+
+
+
+#### Incidence per games
+```{r}
+dd <- as.data.table(dades)[,.(retirements=sum(Retirement=='Yes'),games=sum(sum_score)),by=year]
+
+pe <-pois.exact(x = dd$retirements,pt = dd$games)
+
+per_param <- 1000
+
+dd$incidence     <- per_param*pe[,'rate']
+
+dd$incidence_low <- per_param*pe[,'lower']
+
+dd$incidence_upp <- per_param*pe[,'upper']
+
+
+ggplot(dd,aes(x=year,y=incidence)) +
+
+  geom_line (linewidth=1, col='darkblue') +
+
+  geom_point(col='darkblue', size=3) +
+
+  # geom_errorbar(aes(ymin=incidence_low,ymax=incidence_upp), col='darkblue') +
+
+  # ylim(0,max(dd$incidence_upp)) +
+
+  ylim(0,max(dd$incidence)) +
+
+  xlim(2000,2020) +
+
+  labs(x="Year",
+
+       y="Retirement Incidence Rate per 1,000 games",
+
+       title="Davis Cup Incidence of Retirements by year") +
+
+  theme(axis.title = element_text(face = 'bold'),
+
+        axis.text  = element_text(face = 'bold'))
+
+  # geom_smooth(method='loess', formula=y~x,se = FALSE)
+
+ 
+
+inc_rate_game_overall <- 1000*sum(dd$retirements)/sum(dd$games)
+
+inc_rate_game_overall_per_1 <- pois.exact(x = sum(dd$retirements),pt = sum(dd$games))
+
+inc_rate_game_overall_per_1000 <- inc_rate_game_overall_per_1
+
+inc_rate_game_overall_per_1000[3:5] <- 1000*inc_rate_game_overall_per_1000[3:5]
+
+inc_rate_game_overall_per_1000
+ 
+```
+
+
+
